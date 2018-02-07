@@ -1,6 +1,6 @@
 mod dependency;
-mod ident;
-mod repository;
+pub mod ident;
+pub mod repository;
 
 #[derive(Debug)]
 pub struct Package {
