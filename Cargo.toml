@@ -1,0 +1,6 @@
+[package]
+name = "rosol"
+version = "0.1.0"
+authors = ["rwakulszowa <rwakulszowa1@gmail.com>"]
+
+[dependencies]
