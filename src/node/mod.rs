@@ -10,7 +10,7 @@ use self::dependency::Dependency;
 use self::resolved::Resolved;
 
 trait Node<'a, T: Ident + 'a> {
-    fn resolve(&self, path: Path) -> Resolved<'a, T>;
+    fn resolve(self, path: Path<Simple<'a, T>>) -> Resolved<'a, T>;
 }
 
 #[derive(Debug)]
@@ -20,9 +20,11 @@ pub struct Simple<'a, T: Ident + 'a> {
 }
 
 impl<'a, T: Ident + 'a> Node<'a, T> for Simple<'a, T> {
-    fn resolve(&self, path: Path) -> Resolved<'a, T> {
+    fn resolve(self, mut path: Path<Simple<'a, T>>) -> Resolved<'a, T> {
+        path.append(self);
+
         Resolved {
-           paths: vec![],
+           paths: vec![path],
            cause: Cause::new(vec![])
         }
     }
@@ -45,8 +47,8 @@ mod tests {
             dependency: Dependency {}
         };
 
-        let res = s.resolve(Path {});
+        let res = s.resolve(Path::new(vec![]));
 
-        assert!(res.paths.is_empty());
+        assert!(!res.paths.is_empty());
     }
 }
