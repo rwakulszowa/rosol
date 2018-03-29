@@ -1,9 +1,8 @@
-use node::Simple as SNode;
 use package::ident::Ident;
 
 #[derive(Debug)]
 pub struct Path<T> {
-    nodes: Vec<T>
+    pub nodes: Vec<T>
 }
 
 impl<T> Path<T> {
