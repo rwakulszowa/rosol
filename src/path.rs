@@ -1,6 +1,6 @@
 use package::ident::Ident;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Path<T> {
     pub nodes: Vec<T>
 }
