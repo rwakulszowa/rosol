@@ -14,19 +14,23 @@ use self::solvability::Solvability;
 ///
 /// It is assumed that all `Node` instances are created before
 /// invoking `resolve`
-trait Node<'a, Id: Ident + 'a> {
-    fn resolve(&'a self, path: Path<&'a Simple<'a, Id>>) -> Resolved<'a, Id>;
+pub trait Node: Sized {
+    type Id: Ident;
+
+    fn resolve<'a>(&'a self, mut path: Path<&'a Simple<Self::Id>>) -> Resolved<'a, Self>;
 }
 
 #[derive(Debug)]
-pub struct Simple<'a, Id: Ident + 'a> {
-    pub id: &'a Id,
+pub struct Simple<Id: Ident> {
+    pub id: Id,
     pub dependency: Dependency
 }
 
-impl<'a, Id: Ident + 'a> Node<'a, Id> for Simple<'a, Id> {
-    fn resolve(&'a self, mut path: Path<&'a Simple<'a, Id>>) -> Resolved<'a, Id> {
-        path.append(&self);
+impl<Id: Ident> Node for Simple<Id> {
+    type Id = Id;
+
+    fn resolve<'a>(&'a self, mut path: Path<&'a Simple<Self::Id>>) -> Resolved<'a, Self> {
+        path.append(self);
 
         let solvability = Self::solvability(
             &Self::idents(&path));
@@ -46,7 +50,7 @@ impl<'a, Id: Ident + 'a> Node<'a, Id> for Simple<'a, Id> {
     }
 }
 
-impl<'a, Id: Ident + 'a> Simple<'a, Id> {
+impl<Id: Ident> Simple<Id> {
     fn solvability(idents: &Vec<&Id>) -> Solvability {
         let conflict = Id::are_conflicting(idents);
 
@@ -57,8 +61,8 @@ impl<'a, Id: Ident + 'a> Simple<'a, Id> {
         }
     }
 
-    fn idents<'b>(path: &'b Path<&'b Self>) -> Vec<&'b Id> {
-        path.nodes.iter().map(|n| n.id).collect()
+    fn idents<'b>(path: &Path<&'b Self>) -> Vec<&'b Id> {
+        path.nodes.iter().map(|n| &n.id).collect()
     }
 }
 
@@ -71,7 +75,7 @@ mod tests {
         let id = SimpleUnique { id: "id1" };
 
         let s = Simple {
-            id: &id,
+            id,
             dependency: Dependency {}
         };
 
@@ -85,7 +89,7 @@ mod tests {
         let id = SimpleUnique { id: "id1" };
 
         let s = Simple {
-            id: &id,
+            id,
             dependency: Dependency {}
         };
 

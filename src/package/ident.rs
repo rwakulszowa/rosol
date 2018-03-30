@@ -4,7 +4,7 @@ pub trait Ident {
     fn are_conflicting(instances: &Vec<&Self>) -> bool;
 }
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct SimpleUnique {
     pub id: &'static str
 }

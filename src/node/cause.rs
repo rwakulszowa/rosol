@@ -1,13 +1,13 @@
-use super::Simple as SNode;
+use super::Node;
 use package::ident::Ident;
 
 #[derive(Debug)]
-pub struct Cause<'a, T: 'a + Ident> {
-    pub nodes: Vec<&'a SNode<'a, T>>
+pub struct Cause<'a, T: 'a + Node> {
+    pub nodes: Vec<&'a T>
 }
 
-impl<'a, T: 'a + Ident> Cause<'a, T> {
-    pub fn new(nodes: Vec<&'a SNode<'a, T>>) -> Self {
+impl<'a, T: 'a + Node> Cause<'a, T> {
+    pub fn new(nodes: Vec<&'a T>) -> Self {
         Cause {
             nodes: nodes
         }
