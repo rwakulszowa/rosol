@@ -44,25 +44,37 @@ impl<'a, T: 'a + Resolvable> Cause<'a, T> {
 
 #[cfg(test)]
 mod tests {
+    use node::resolved::Resolved;
+    use path::Path;
     use super::*;
     use package::ident::SimpleUnique;
-    use node::resolvable::Simple;
+
+    type N = Node<MockResolvable>;
+
+    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+    struct MockResolvable {}
+
+    impl Resolvable for MockResolvable {
+        type Id = SimpleUnique;
+
+        fn resolve<'a>(&'a self, path: Path<'a, Self>) -> Resolved<'a, Self> {
+            Resolved::success(path)
+        }
+    }
 
     #[test]
     fn adds() {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let a_dep = Simple::new(&a);
-
-        let b = Node {
+        let b: N = Node {
             id: id_b.clone(),
-            dependency: Some(a_dep)
+            dependency: None
         };
 
         let mut nodes = HashSet::new();
@@ -87,16 +99,14 @@ mod tests {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let a_dep = Simple::new(&a);
-
-        let b = Node {
+        let b: N = Node {
             id: id_b.clone(),
-            dependency: Some(a_dep)
+            dependency: None
         };
 
         let mut nodes = HashSet::new();

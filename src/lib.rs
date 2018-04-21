@@ -1,7 +1,7 @@
 mod cache;
-mod node;
-mod package;
-mod path;
+pub mod node;
+pub mod package;
+pub mod path;
 
 #[cfg(test)]
 mod tests {

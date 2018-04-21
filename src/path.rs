@@ -1,5 +1,3 @@
-use std::cmp::PartialEq;
-
 use node::resolvable::Resolvable;
 use node::Node;
 use package::ident::Ident;
@@ -34,9 +32,22 @@ impl<'a, T: 'a + Resolvable> Path<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use node::resolvable::Simple;
+    use node::resolved::Resolved;
     use package::ident::SimpleUnique;
     use super::*;
+
+    type N = Node<MockResolvable>;
+
+    #[derive(Clone, Debug, Eq, Hash, PartialEq)]
+    struct MockResolvable {}
+
+    impl Resolvable for MockResolvable {
+        type Id = SimpleUnique;
+
+        fn resolve<'a>(&'a self, path: Path<'a, Self>) -> Resolved<'a, Self> {
+            Resolved::success(path)
+        }
+    }
 
     pub fn vec_equal<T: Eq>(a: Vec<T>, b: Vec<T>) -> bool {
         (a.len() == b.len()) &&
@@ -47,11 +58,11 @@ mod tests {
 
     #[test]
     fn appends() {
-        let path: Path<Simple<SimpleUnique>> = Path::new(vec![]);
+        let path = Path::new(vec![]);
 
         let id_a = SimpleUnique { id: "a" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
@@ -68,12 +79,12 @@ mod tests {
     fn unique() {
         let id_a = SimpleUnique { id: "a" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let path: Path<Simple<SimpleUnique>> = Path::new(vec![&a]);
+        let path = Path::new(vec![&a]);
 
         assert!(path.unique(&a));
 
@@ -86,17 +97,17 @@ mod tests {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let b = Node {
+        let b: N = Node {
             id: id_b.clone(),
             dependency: None
         };
 
-        let path: Path<Simple<SimpleUnique>>  = Path::new(vec![&a, &b]);
+        let path = Path::new(vec![&a, &b]);
 
         assert_eq!(
             path.idents(),
@@ -108,17 +119,17 @@ mod tests {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let b = Node {
+        let b: N = Node {
             id: id_b.clone(),
             dependency: None
         };
 
-        let path: Path<Simple<SimpleUnique>> = Path::new(vec![&a, &b]);
+        let path = Path::new(vec![&a, &b]);
         assert!(!path.conflict());
 
         let path = path.append(&a);
