@@ -4,6 +4,7 @@ mod resolved;
 mod solvability;
 
 use std::cmp::Eq;
+use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -17,19 +18,19 @@ use self::solvability::Solvability;
 ///
 /// It is assumed that all `Node` instances are created before
 /// invoking `resolve`
-pub trait Node: Sized {
-    type Id: Ident + Eq + Hash;
+pub trait Node: Eq + Hash + Sized + PartialEq {
+    type Id: Ident + Eq + Hash + PartialEq;
 
     fn resolve<'a>(&'a self, mut path: Path<&'a Simple<Self::Id>>, nodes: &'a HashMap<Self::Id, Self>) -> Resolved<'a, Self>;
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Simple<Id: Ident + Eq + Hash> {
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Simple<Id: Ident + Eq + Hash + PartialEq> {
     pub id: Id,
     pub dependency: Option<Id>
 }
 
-impl<Id: Ident + Eq + Hash> Node for Simple<Id> {
+impl<Id: Ident + Eq + Hash + PartialEq> Node for Simple<Id> {
     type Id = Id;
 
     fn resolve<'a>(&'a self, mut path: Path<&'a Simple<Self::Id>>, nodes: &'a HashMap<Self::Id, Self>) -> Resolved<'a, Self> {
@@ -46,19 +47,20 @@ impl<Id: Ident + Eq + Hash> Node for Simple<Id> {
                 match dependency {
                     Some(dependency) => {
                         let subresult = dependency.resolve(path, &nodes);
-
-                        let cause = match subresult.is_success() {
-                            true => Cause::empty(),
-                            false => Cause::from(self)
-                        };
-
-                        Resolved::new(subresult.paths, cause)
+                        Resolved::new(
+                            subresult.paths,
+                            subresult.cause.above(self))
                     },
                     None => Resolved::new(vec![path], Cause::empty())
                 }
             },
-            Solvability::Conflict =>
-                Resolved::failure(Cause::from(self)),
+            Solvability::Conflict => {
+                let cause = match path.unique(&self) {
+                    true => Cause::empty(),
+                    false => Cause::from(self)
+                };
+                Resolved::failure(cause)
+            },
             _ => unreachable!()
         }
     }
@@ -101,7 +103,11 @@ mod tests {
             &nodes
         );
 
-        assert!(!res.paths.is_empty());
+        let expected = Resolved::new(
+            vec![Path::new(vec![&s])],
+            Cause::empty());
+
+        assert_eq!(res, expected);
     }
 
     #[test]
@@ -119,7 +125,10 @@ mod tests {
         let path = Path::new(vec![&s]);
         let res = s.resolve(path, &nodes);
 
-        assert!(res.paths.is_empty());
+        let expected = Resolved::failure(
+            Cause::from(&s));
+
+        assert_eq!(res, expected);
     }
 
     #[test]
@@ -144,8 +153,31 @@ mod tests {
         let path = Path::new(vec![]);
         let res = b.resolve(path, &nodes);
 
-        assert_eq!(
-            res.paths,
-            vec![Path::new(vec![&b, &a])]);
+        let expected = Resolved::new(
+            vec![Path::new(vec![&b, &a])],
+            Cause::empty());
+
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn cleans_internal_causes() {
+        let id = SimpleUnique { id: "id1" };
+
+        let circular = Simple {
+            id: id.clone(),
+            dependency: Some(id.clone())
+        };
+
+        let mut nodes = HashMap::new();
+        nodes.insert(id.clone(), circular.clone());
+
+        let path = Path::new(vec![]);
+        let res = circular.resolve(path, &nodes);
+
+        let expected = Resolved::failure(
+            Cause::empty());
+
+        assert_eq!(res, expected);
     }
 }
