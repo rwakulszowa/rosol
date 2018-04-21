@@ -12,4 +12,12 @@ impl<'a, T: 'a + Node> Cause<'a, T> {
             nodes: nodes
         }
     }
+
+    pub fn empty() -> Self {
+        Self::new(vec![])
+    }
+
+    pub fn from(node: &'a T) -> Self {
+        Self::new(vec![node])
+    }
 }

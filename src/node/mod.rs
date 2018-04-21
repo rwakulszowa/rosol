@@ -47,30 +47,18 @@ impl<Id: Ident + Eq + Hash> Node for Simple<Id> {
                     Some(dependency) => {
                         let subresult = dependency.resolve(path, &nodes);
 
-                        let is_failure = subresult.paths.len() == 0;
-
-                        let cause = match is_failure {
-                            true => Cause::new(vec![self]),
-                            false => Cause::new(vec![])
+                        let cause = match subresult.is_success() {
+                            true => Cause::empty(),
+                            false => Cause::from(self)
                         };
 
-                        Resolved {
-                            paths: subresult.paths,
-                            cause
-                        }
+                        Resolved::new(subresult.paths, cause)
                     },
-                    None => Resolved {
-                        paths: vec![path],
-                        cause: Cause::new(vec![])
-                    }
+                    None => Resolved::new(vec![path], Cause::empty())
                 }
             },
-            Solvability::Conflict => {
-                Resolved {
-                    paths: vec![],
-                    cause: Cause::new(vec![&self])
-                }
-            },
+            Solvability::Conflict =>
+                Resolved::failure(Cause::from(self)),
             _ => unreachable!()
         }
     }
