@@ -2,7 +2,7 @@ use node::resolvable::Resolvable;
 use node::Node;
 use package::ident::Ident;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Path<'a, T: 'a + Resolvable> {
     pub nodes: Vec<&'a Node<T>>
 }

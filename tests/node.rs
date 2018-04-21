@@ -8,9 +8,10 @@ use rosol::node::resolved::Resolved;
 use rosol::package::ident::SimpleUnique;
 use rosol::path::Path;
 
-use self::resolvable_impl::Simple as SimpleResolvable;
+use self::resolvable_impl as resolvable;
 
-type N = Node<SimpleResolvable<SimpleUnique>>;
+type N = Node<resolvable::Simple<SimpleUnique>>;
+type NAny = Node<resolvable::Any<SimpleUnique>>;
 
 #[test]
 fn single_node() {
@@ -57,7 +58,7 @@ fn circular() {
         dependency: None
     };
 
-    let dep = SimpleResolvable::new(&circular);
+    let dep = resolvable::Simple::new(&circular);
     circular.dependency = Some(dep);
 
     let path = Path::new(vec![]);
@@ -71,6 +72,7 @@ fn circular() {
 
 #[test]
 fn recursive() {
+    // c -> b -> a => c -> b -> a
     let id_a = SimpleUnique { id: "a" };
     let id_b = SimpleUnique { id: "b" };
     let id_c = SimpleUnique { id: "c" };
@@ -80,14 +82,14 @@ fn recursive() {
         dependency: None
     };
 
-    let a_dep = SimpleResolvable::new(&a);
+    let a_dep = resolvable::Simple::new(&a);
 
     let b: N = Node {
         id: id_b.clone(),
         dependency: Some(a_dep)
     };
 
-    let b_dep = SimpleResolvable::new(&b);
+    let b_dep = resolvable::Simple::new(&b);
 
     let c: N = Node {
         id: id_c.clone(),
@@ -104,3 +106,38 @@ fn recursive() {
     assert_eq!(res, expected);
 }
 
+#[test]
+fn with_any() {
+    // a -> (b | c -> a) => a -> b  // TODO: magic syntax / macro
+    let id_a = SimpleUnique { id: "a" };
+    let id_b = SimpleUnique { id: "b" };
+    let id_c = SimpleUnique { id: "c" };
+
+    let mut a: NAny = Node {
+        id: id_a.clone(),
+        dependency: None
+    };
+
+    let b: NAny = Node {
+        id: id_b.clone(),
+        dependency: None
+    };
+
+    let c: NAny = Node {
+        id: id_c.clone(),
+        dependency: Some(
+            resolvable::Any::new(vec![&a]))
+    };
+
+    a.dependency = Some(
+        resolvable::Any::new(vec![&b, &c]));
+
+    let path = Path::new(vec![]);
+    let res = a.solve(path);
+
+    let expected = Resolved::new(
+        vec![Path::new(vec![&a, &b])],
+        Cause::empty());
+
+    assert_eq!(res, expected);
+}

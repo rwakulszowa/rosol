@@ -37,6 +37,11 @@ impl<'a, T: 'a + Resolvable> Cause<'a, T> {
         self
     }
 
+    pub fn merge(mut self, other: Cause<'a, T>) -> Self {
+        self.nodes.extend(other.nodes);
+        self
+    }
+
     fn has(&self, node: &Node<T>) -> bool {
         self.nodes.contains(node)
     }
@@ -126,5 +131,43 @@ mod tests {
         assert_eq!(
             cause_ab.clone().above(&b),
             cause_a);
+    }
+
+    #[test]
+    fn merges() {
+        let id_a = SimpleUnique { id: "a" };
+        let id_b = SimpleUnique { id: "b" };
+        let id_c = SimpleUnique { id: "c" };
+
+        let a: N = Node {
+            id: id_a.clone(),
+            dependency: None
+        };
+
+        let b: N = Node {
+            id: id_b.clone(),
+            dependency: None
+        };
+
+        let c: N = Node {
+            id: id_c.clone(),
+            dependency: None
+        };
+
+        let mut nodes = HashSet::new();
+
+        nodes.insert(&a);
+        nodes.insert(&b);
+        let cause_ab = Cause::new(nodes.clone());
+
+        nodes.insert(&c);
+        let cause_abc = Cause::new(nodes.clone());
+
+        nodes.remove(&b);
+        let cause_ac = Cause::new(nodes.clone());
+
+        assert_eq!(
+            cause_ab.merge(cause_ac),
+            cause_abc);
     }
 }

@@ -27,3 +27,35 @@ impl<T: Ident> Simple<T> {
         }
     }
 }
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+/// Node with alternative dependencies
+pub struct Any<T: Ident> {
+    pub deps: Vec<Node<Any<T>>>
+}
+
+impl<T: Ident> Resolvable for Any<T> {
+    type Id = T;
+
+    fn resolve<'a>(&'a self, path: Path<'a, Self>) -> Resolved<'a, Self> {
+        let results = self.deps
+            .iter()
+            .map(|node| node.solve(path.clone()))
+            .collect();
+
+        Resolved::merge(results)
+    }
+}
+
+impl<T: Ident> Any<T> {
+    pub fn new(nodes: Vec<&Node<Any<T>>>) -> Self {
+        let deps = nodes
+            .into_iter()
+            .map(|n| n.clone())
+            .collect();
+
+        Any {
+            deps
+        }
+    }
+}
