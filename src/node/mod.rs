@@ -1,5 +1,4 @@
 mod cause;
-mod dependency;
 mod resolved;
 mod solvability;
 
@@ -14,30 +13,18 @@ use self::cause::Cause;
 use self::resolved::Resolved;
 use self::solvability::Solvability;
 
-/// Node of a DFS-resolvable tree.
-///
-/// It is assumed that all `Node` instances are created before
-/// invoking `resolve`
-pub trait Node: Eq + Hash + Sized + PartialEq {
-    type Id: Ident + Eq + Hash + PartialEq;
-
-    fn resolve<'a>(&'a self, mut path: Path<&'a Simple<Self::Id>>, nodes: &'a HashMap<Self::Id, Self>) -> Resolved<'a, Self>;
-}
-
+/// Node of a DFS-traversable tree.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Simple<Id: Ident + Eq + Hash + PartialEq> {
+pub struct Node<Id: Ident> {
     pub id: Id,
     pub dependency: Option<Id>
 }
 
-impl<Id: Ident + Eq + Hash + PartialEq> Node for Simple<Id> {
-    type Id = Id;
+impl <Id: Ident> Node<Id> {
+    pub fn resolve<'a>(&'a self, path: Path<'a, Id>, nodes: &'a HashMap<Id, Self>) -> Resolved<'a, Id> {
+        let path = path.append(self);
 
-    fn resolve<'a>(&'a self, mut path: Path<&'a Simple<Self::Id>>, nodes: &'a HashMap<Self::Id, Self>) -> Resolved<'a, Self> {
-        path.append(&self);
-
-        let solvability = Self::solvability(
-            &Self::idents(&path));
+        let solvability = Self::solvability(&path);
 
         match solvability {
             Solvability::Ok => {
@@ -64,21 +51,15 @@ impl<Id: Ident + Eq + Hash + PartialEq> Node for Simple<Id> {
             _ => unreachable!()
         }
     }
-}
 
-impl<Id: Ident + Eq + Hash> Simple<Id> {
-    fn solvability(idents: &Vec<&Id>) -> Solvability {
-        let conflict = Id::are_conflicting(idents);
+    fn solvability(path: &Path<Id>) -> Solvability {
+        let conflict = Id::are_conflicting(&path.idents());
 
         if conflict {
             Solvability::Conflict
         } else {
             Solvability::Ok
         }
-    }
-
-    fn idents<'b>(path: &Path<&'b Self>) -> Vec<&'b Id> {
-        path.nodes.iter().map(|n| &n.id).collect()
     }
 }
 
@@ -90,7 +71,7 @@ mod tests {
     fn resolves() {
         let id = SimpleUnique { id: "id1" };
 
-        let s = Simple {
+        let s = Node {
             id: id.clone(),
             dependency: None
         };
@@ -114,7 +95,7 @@ mod tests {
     fn resolves_into_empty_when_duplicated() {
         let id = SimpleUnique { id: "id1" };
 
-        let s = Simple {
+        let s = Node {
             id: id.clone(),
             dependency: None
         };
@@ -136,12 +117,12 @@ mod tests {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Simple {
+        let a = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let b = Simple {
+        let b = Node {
             id: id_b.clone(),
             dependency: Some(id_a.clone())
         };
@@ -164,7 +145,7 @@ mod tests {
     fn cleans_internal_causes() {
         let id = SimpleUnique { id: "id1" };
 
-        let circular = Simple {
+        let circular = Node {
             id: id.clone(),
             dependency: Some(id.clone())
         };

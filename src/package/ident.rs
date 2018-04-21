@@ -1,7 +1,10 @@
+use std::cmp::Eq;
+use std::cmp::PartialEq;
 use std::collections::HashSet;
+use std::hash::Hash;
 
-pub trait Ident {
-    fn are_conflicting(instances: &Vec<&Self>) -> bool;
+pub trait Ident: Clone + Eq + Hash + PartialEq {
+    fn are_conflicting(instances: &Vec<Self>) -> bool;
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -16,7 +19,7 @@ impl SimpleUnique {
 }
 
 impl Ident for SimpleUnique {
-    fn are_conflicting(instances: &Vec<&Self>) -> bool {
+    fn are_conflicting(instances: &Vec<Self>) -> bool {
         let mut found = HashSet::new();
 
         !instances
@@ -34,7 +37,7 @@ mod tests {
         let a = SimpleUnique::new("A");
         let b = SimpleUnique::new("B");
 
-        assert!(!SimpleUnique::are_conflicting(&vec![&a, &b]));
-        assert!(SimpleUnique::are_conflicting(&vec![&a, &b, &a]));
+        assert!(!SimpleUnique::are_conflicting(&vec![a.clone(), b.clone()]));
+        assert!(SimpleUnique::are_conflicting(&vec![a.clone(), b.clone(), a.clone()]));
     }
 }

@@ -1,14 +1,15 @@
 use std::collections::HashSet;
 
+use package::ident::Ident;
 use super::Node;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Cause<'a, T: 'a + Node> {
-    pub nodes: HashSet<&'a T>
+pub struct Cause<'a, T: 'a + Ident> {
+    pub nodes: HashSet<&'a Node<T>>
 }
 
-impl<'a, T: 'a + Node> Cause<'a, T> {
-    pub fn new(nodes: HashSet<&'a T>) -> Self {
+impl<'a, T: 'a + Ident> Cause<'a, T> {
+    pub fn new(nodes: HashSet<&'a Node<T>>) -> Self {
         Cause { nodes }
     }
 
@@ -16,27 +17,27 @@ impl<'a, T: 'a + Node> Cause<'a, T> {
         Self::new(HashSet::new())
     }
 
-    pub fn from(node: &'a T) -> Self {
+    pub fn from(node: &'a Node<T>) -> Self {
         let mut nodes = HashSet::new();
         nodes.insert(node);
         Self::new(nodes)
     }
 
-    pub fn add(mut self, node: &'a T) -> Self {
+    pub fn add(mut self, node: &'a Node<T>) -> Self {
         if !self.has(node) {
             self.nodes.insert(node);
         }
         self
     }
 
-    pub fn above(mut self, node: &'a T) -> Self {
+    pub fn above(mut self, node: &'a Node<T>) -> Self {
         if self.has(node) {
             self.nodes.remove(node);
         }
         self
     }
 
-    fn has(&self, node: &T) -> bool {
+    fn has(&self, node: &Node<T>) -> bool {
         self.nodes.contains(node)
     }
 }
@@ -45,19 +46,18 @@ impl<'a, T: 'a + Node> Cause<'a, T> {
 mod tests {
     use super::*;
     use package::ident::SimpleUnique;
-    use node::Simple;
 
     #[test]
     fn adds() {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Simple {
+        let a = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let b = Simple {
+        let b = Node {
             id: id_b.clone(),
             dependency: Some(id_a.clone())
         };
@@ -84,12 +84,12 @@ mod tests {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Simple {
+        let a = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let b = Simple {
+        let b = Node {
             id: id_b.clone(),
             dependency: Some(id_a.clone())
         };
