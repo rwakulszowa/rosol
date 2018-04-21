@@ -2,6 +2,7 @@ mod cache;
 pub mod node;
 pub mod package;
 pub mod path;
+pub mod utils;
 
 #[cfg(test)]
 mod tests {

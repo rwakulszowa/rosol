@@ -17,6 +17,37 @@ impl<'a, T: 'a + Resolvable> Path<'a, T> {
         self
     }
 
+    pub fn chain(elements: Vec<Self>) -> Self {
+        Self::new(
+            elements
+                .into_iter()
+                .flat_map(|path| path.nodes)
+                .collect())
+    }
+
+    pub fn suffix(&self, prefix: &Self) -> Self {
+        let long = &self.nodes;
+        let short = &prefix.nodes;
+
+        assert!({
+            let long_prefix: Vec<&&Node<T>> = long
+                .iter()
+                .take(short.len())
+                .collect();
+            let short_: Vec<&&Node<T>> = short
+                .iter()
+                .collect();
+            long_prefix == short_
+        });
+
+        Self::new(
+            long
+                .into_iter()
+                .skip(short.len())
+                .map(|&n| n)
+                .collect())
+    }
+
     pub fn unique(&self, el: &Node<T>) -> bool {
        self.nodes.iter().filter(|&&x| x == el).count() == 1
     }
@@ -73,6 +104,62 @@ mod tests {
             vec_equal(
                 path.nodes,
                 vec![&a]));
+    }
+
+    #[test]
+    fn chains() {
+        let id_a = SimpleUnique { id: "a" };
+        let id_b = SimpleUnique { id: "b" };
+        let id_c = SimpleUnique { id: "c" };
+
+        let a: N = Node {
+            id: id_a.clone(),
+            dependency: None
+        };
+        let b: N = Node {
+            id: id_b.clone(),
+            dependency: None
+        };
+        let c: N = Node {
+            id: id_c.clone(),
+            dependency: None
+        };
+
+        let path_a = Path::new(vec![&a]);
+        let path_bc = Path::new(vec![&b, &c]);
+        let path_abc = Path::new(vec![&a, &b, &c]);
+
+        assert_eq!(
+            Path::chain(vec![path_a, path_bc]),
+            path_abc);
+    }
+
+    #[test]
+    fn suffix() {
+        let id_a = SimpleUnique { id: "a" };
+        let id_b = SimpleUnique { id: "b" };
+        let id_c = SimpleUnique { id: "c" };
+
+        let a: N = Node {
+            id: id_a.clone(),
+            dependency: None
+        };
+        let b: N = Node {
+            id: id_b.clone(),
+            dependency: None
+        };
+        let c: N = Node {
+            id: id_c.clone(),
+            dependency: None
+        };
+
+        let path_a = Path::new(vec![&a]);
+        let path_bc = Path::new(vec![&b, &c]);
+        let path_abc = Path::new(vec![&a, &b, &c]);
+
+        assert_eq!(
+            path_abc.suffix(&path_a),
+            path_bc);
     }
 
     #[test]
