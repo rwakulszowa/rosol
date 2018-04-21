@@ -1,7 +1,7 @@
 pub mod cause;
 pub mod resolvable;
 pub mod resolved;
-mod solvability;
+pub mod solvability;
 
 use path::Path;
 use self::cause::Cause;
@@ -20,7 +20,8 @@ impl <R: Resolvable> Node<R> {
     pub fn solve<'a>(&'a self, path: Path<'a, R>) -> Resolved<'a, R> {
         let path = path.append(self);
 
-        let solvability = self.solvability(&path);
+        let solvability = Self::solvability(&path);
+        println!("Node:solve {:?} ", self.id);
 
         match solvability {
             Solvability::Ok => {
@@ -45,7 +46,7 @@ impl <R: Resolvable> Node<R> {
         }
     }
 
-    fn solvability(&self, path: &Path<R>) -> Solvability {
+    pub fn solvability(path: &Path<R>) -> Solvability {
         if path.conflict() {
             Solvability::Conflict
         } else {
