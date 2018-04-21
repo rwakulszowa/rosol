@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
-use package::ident::Ident;
+use super::resolvable::Resolvable;
 use super::Node;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Cause<'a, T: 'a + Ident> {
+pub struct Cause<'a, T: 'a + Resolvable> {
     pub nodes: HashSet<&'a Node<T>>
 }
 
-impl<'a, T: 'a + Ident> Cause<'a, T> {
+impl<'a, T: 'a + Resolvable> Cause<'a, T> {
     pub fn new(nodes: HashSet<&'a Node<T>>) -> Self {
         Cause { nodes }
     }
@@ -46,6 +46,7 @@ impl<'a, T: 'a + Ident> Cause<'a, T> {
 mod tests {
     use super::*;
     use package::ident::SimpleUnique;
+    use node::resolvable::Simple;
 
     #[test]
     fn adds() {
@@ -57,9 +58,11 @@ mod tests {
             dependency: None
         };
 
+        let a_dep = Simple::new(&a);
+
         let b = Node {
             id: id_b.clone(),
-            dependency: Some(id_a.clone())
+            dependency: Some(a_dep)
         };
 
         let mut nodes = HashSet::new();
@@ -89,9 +92,11 @@ mod tests {
             dependency: None
         };
 
+        let a_dep = Simple::new(&a);
+
         let b = Node {
             id: id_b.clone(),
-            dependency: Some(id_a.clone())
+            dependency: Some(a_dep)
         };
 
         let mut nodes = HashSet::new();

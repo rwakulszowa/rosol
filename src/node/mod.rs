@@ -1,44 +1,42 @@
+pub mod resolvable;
 mod cause;
 mod resolved;
 mod solvability;
 
 use std::cmp::Eq;
 use std::cmp::PartialEq;
-use std::collections::HashMap;
 use std::hash::Hash;
 
 use package::ident::{Ident, SimpleUnique};
 use path::Path;
 use self::cause::Cause;
 use self::resolved::Resolved;
+use self::resolvable::Resolvable;
 use self::solvability::Solvability;
 
 /// Node of a DFS-traversable tree.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Node<Id: Ident> {
-    pub id: Id,
-    pub dependency: Option<Id>
+pub struct Node<R: Resolvable> {
+    pub id: R::Id,
+    pub dependency: Option<R>
 }
 
-impl <Id: Ident> Node<Id> {
-    pub fn resolve<'a>(&'a self, path: Path<'a, Id>, nodes: &'a HashMap<Id, Self>) -> Resolved<'a, Id> {
+impl <R: Resolvable> Node<R> {
+    pub fn solve<'a>(&'a self, path: Path<'a, R>) -> Resolved<'a, R> {
         let path = path.append(self);
 
-        let solvability = Self::solvability(&path);
+        let solvability = self.solvability(&path);
 
         match solvability {
             Solvability::Ok => {
-                let dependency = self.dependency.as_ref().and_then(
-                    |id| nodes.get(&id));
-
-                match dependency {
-                    Some(dependency) => {
-                        let subresult = dependency.resolve(path, &nodes);
+                match self.dependency {
+                    Some(ref dependency) => {
+                        let subresult = dependency.resolve(path);
                         Resolved::new(
                             subresult.paths,
                             subresult.cause.above(self))
                     },
-                    None => Resolved::new(vec![path], Cause::empty())
+                    None => Resolved::success(path)
                 }
             },
             Solvability::Conflict => {
@@ -52,10 +50,8 @@ impl <Id: Ident> Node<Id> {
         }
     }
 
-    fn solvability(path: &Path<Id>) -> Solvability {
-        let conflict = Id::are_conflicting(&path.idents());
-
-        if conflict {
+    fn solvability(&self, path: &Path<R>) -> Solvability {
+        if path.conflict() {
             Solvability::Conflict
         } else {
             Solvability::Ok
@@ -66,23 +62,20 @@ impl <Id: Ident> Node<Id> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use self::resolvable::Simple;
+
+    type N = Node<Simple<SimpleUnique>>;
 
     #[test]
-    fn resolves() {
+    fn solves() {
         let id = SimpleUnique { id: "id1" };
 
-        let s = Node {
+        let s: N = Node {
             id: id.clone(),
             dependency: None
         };
 
-        let mut nodes = HashMap::new();
-        nodes.insert(id.clone(), s.clone());
-
-        let res = s.resolve(
-            Path::new(vec![]),
-            &nodes
-        );
+        let res = s.solve(Path::new(vec![]));
 
         let expected = Resolved::new(
             vec![Path::new(vec![&s])],
@@ -95,16 +88,13 @@ mod tests {
     fn resolves_into_empty_when_duplicated() {
         let id = SimpleUnique { id: "id1" };
 
-        let s = Node {
+        let s: N = Node {
             id: id.clone(),
             dependency: None
         };
 
-        let mut nodes = HashMap::new();
-        nodes.insert(id.clone(), s.clone());
-
         let path = Path::new(vec![&s]);
-        let res = s.resolve(path, &nodes);
+        let res = s.solve(path);
 
         let expected = Resolved::failure(
             Cause::from(&s));
@@ -117,22 +107,20 @@ mod tests {
         let id_a = SimpleUnique { id: "a" };
         let id_b = SimpleUnique { id: "b" };
 
-        let a = Node {
+        let a: N = Node {
             id: id_a.clone(),
             dependency: None
         };
 
-        let b = Node {
+        let a_dep = Simple::new(&a);
+
+        let b: N = Node {
             id: id_b.clone(),
-            dependency: Some(id_a.clone())
+            dependency: Some(a_dep)
         };
 
-        let mut nodes = HashMap::new();
-        nodes.insert(id_a.clone(), a.clone());
-        nodes.insert(id_b.clone(), b.clone());
-
         let path = Path::new(vec![]);
-        let res = b.resolve(path, &nodes);
+        let res = b.solve(path);
 
         let expected = Resolved::new(
             vec![Path::new(vec![&b, &a])],
@@ -145,16 +133,16 @@ mod tests {
     fn cleans_internal_causes() {
         let id = SimpleUnique { id: "id1" };
 
-        let circular = Node {
+        let mut circular: N = Node {
             id: id.clone(),
-            dependency: Some(id.clone())
+            dependency: None
         };
 
-        let mut nodes = HashMap::new();
-        nodes.insert(id.clone(), circular.clone());
+        let dep = Simple::new(&circular);
+        circular.dependency = Some(dep);
 
         let path = Path::new(vec![]);
-        let res = circular.resolve(path, &nodes);
+        let res = circular.solve(path);
 
         let expected = Resolved::failure(
             Cause::empty());

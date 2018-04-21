@@ -1,20 +1,23 @@
-use package::ident::Ident;
 use path::Path;
 use super::cause::Cause;
-use super::Node;
+use super::resolvable::Resolvable;
 
 #[derive(Debug, PartialEq)]
-pub struct Resolved<'a, T: 'a + Ident> {
+pub struct Resolved<'a, T: 'a + Resolvable> {
     pub paths: Vec<Path<'a, T>>,
     pub cause: Cause<'a, T>
 }
 
-impl<'a, T: 'a + Ident> Resolved<'a, T> {
+impl<'a, T: 'a + Resolvable> Resolved<'a, T> {
     pub fn new(paths: Vec<Path<'a, T>>, cause: Cause<'a, T>) -> Self {
         Resolved {
             paths,
             cause
         }
+    }
+
+    pub fn success(path: Path<'a, T>) -> Self {
+        Self::new(vec![path], Cause::empty())
     }
 
     pub fn failure(cause: Cause<'a, T>) -> Self {

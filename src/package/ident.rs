@@ -1,9 +1,10 @@
 use std::cmp::Eq;
 use std::cmp::PartialEq;
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::hash::Hash;
 
-pub trait Ident: Clone + Eq + Hash + PartialEq {
+pub trait Ident: Clone + Debug + Eq + Hash + PartialEq {
     fn are_conflicting(instances: &Vec<Self>) -> bool;
 }
 

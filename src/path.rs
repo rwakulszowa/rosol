@@ -1,13 +1,15 @@
 use std::cmp::PartialEq;
+
+use node::resolvable::Resolvable;
 use node::Node;
 use package::ident::Ident;
 
 #[derive(Debug, PartialEq)]
-pub struct Path<'a, T: 'a + Ident> {
+pub struct Path<'a, T: 'a + Resolvable> {
     pub nodes: Vec<&'a Node<T>>
 }
 
-impl<'a, T: 'a + Ident> Path<'a, T> {
+impl<'a, T: 'a + Resolvable> Path<'a, T> {
     pub fn new(nodes: Vec<&'a Node<T>>) -> Self {
         Path { nodes: nodes }
     }
@@ -21,15 +23,20 @@ impl<'a, T: 'a + Ident> Path<'a, T> {
        self.nodes.iter().filter(|&&x| x == el).count() == 1
     }
 
-    pub fn idents(&self) -> Vec<T> {
+    pub fn idents(&self) -> Vec<T::Id> {
         self.nodes.iter().map(|x| x.id.clone()).collect()
+    }
+
+    pub fn conflict(&self) -> bool {
+        T::Id::are_conflicting(&self.idents())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use node::resolvable::Simple;
     use package::ident::SimpleUnique;
+    use super::*;
 
     pub fn vec_equal<T: Eq>(a: Vec<T>, b: Vec<T>) -> bool {
         (a.len() == b.len()) &&
@@ -40,7 +47,7 @@ mod tests {
 
     #[test]
     fn appends() {
-        let path = Path::new(vec![]);
+        let path: Path<Simple<SimpleUnique>> = Path::new(vec![]);
 
         let id_a = SimpleUnique { id: "a" };
 
@@ -66,11 +73,11 @@ mod tests {
             dependency: None
         };
 
-        let mut path = Path::new(vec![&a]);
+        let path: Path<Simple<SimpleUnique>> = Path::new(vec![&a]);
 
         assert!(path.unique(&a));
 
-        path = path.append(&a);
+        let path = path.append(&a);
         assert!(!path.unique(&a));
     }
 
@@ -89,10 +96,32 @@ mod tests {
             dependency: None
         };
 
-        let path = Path::new(vec![&a, &b]);
+        let path: Path<Simple<SimpleUnique>>  = Path::new(vec![&a, &b]);
 
         assert_eq!(
             path.idents(),
             vec![id_a, id_b]);
+    }
+
+    #[test]
+    fn conflict() {
+        let id_a = SimpleUnique { id: "a" };
+        let id_b = SimpleUnique { id: "b" };
+
+        let a = Node {
+            id: id_a.clone(),
+            dependency: None
+        };
+
+        let b = Node {
+            id: id_b.clone(),
+            dependency: None
+        };
+
+        let path: Path<Simple<SimpleUnique>> = Path::new(vec![&a, &b]);
+        assert!(!path.conflict());
+
+        let path = path.append(&a);
+        assert!(path.conflict());
     }
 }
