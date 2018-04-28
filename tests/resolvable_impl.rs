@@ -5,26 +5,26 @@ use rosol::node::Node;
 use rosol::node::resolvable::Resolvable;
 use rosol::node::resolved::Resolved;
 use rosol::node::solvability::Solvability;
-use rosol::package::ident::{Ident, SimpleUnique};
+use rosol::package::ident::SimpleUnique;
 use rosol::path::Path;
 use rosol::utils;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-/// Trivial implementation for demonstation / testing
-pub struct Simple<T: Ident> {  // TODO: make them all non-generic (for simplicity)
-    pub node: Box<Node<Simple<T>>>
+/// String based implementation
+pub struct Simple {
+    pub node: Box<Node<Simple>>
 }
 
-impl<T: Ident> Resolvable for Simple<T> {
-    type Id = T;
+impl Resolvable for Simple {
+    type Id = SimpleUnique;
 
     fn resolve<'a>(&'a self, path: Path<'a, Self>) -> Resolved<'a, Self> {
         self.node.solve(path)
     }
 }
 
-impl<T: Ident> Simple<T> {
-    pub fn new(node: &Node<Simple<T>>) -> Self {
+impl Simple {
+    pub fn new(node: &Node<Simple>) -> Self {
         Simple {
             node: Box::new(node.clone())
         }
@@ -33,12 +33,12 @@ impl<T: Ident> Simple<T> {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 /// Node with alternative dependencies
-pub struct Any<T: Ident> {
-    pub deps: Vec<Node<Any<T>>>
+pub struct Any {
+    pub deps: Vec<Node<Any>>
 }
 
-impl<T: Ident> Resolvable for Any<T> {
-    type Id = T;
+impl Resolvable for Any {
+    type Id = SimpleUnique;
 
     fn resolve<'a>(&'a self, path: Path<'a, Self>) -> Resolved<'a, Self> {
         let results = self.deps
@@ -50,8 +50,8 @@ impl<T: Ident> Resolvable for Any<T> {
     }
 }
 
-impl<T: Ident> Any<T> {
-    pub fn new(nodes: Vec<&Node<Any<T>>>) -> Self {
+impl Any {
+    pub fn new(nodes: Vec<&Node<Any>>) -> Self {
         let deps = nodes
             .into_iter()
             .map(|n| n.clone())

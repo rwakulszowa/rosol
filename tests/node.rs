@@ -10,14 +10,13 @@ use rosol::path::Path;
 
 use self::resolvable_impl as resolvable;
 
-type N = Node<resolvable::Simple<SimpleUnique>>;
-type NAny = Node<resolvable::Any<SimpleUnique>>;
-
 #[test]
 fn single_node() {
+    type R = resolvable::Simple;
+
     let id = SimpleUnique { id: "id1" };
 
-    let s: N = Node {
+    let s: Node<R> = Node {
         id: id.clone(),
         dependency: None
     };
@@ -33,9 +32,11 @@ fn single_node() {
 
 #[test]
 fn duplicate() {
+    type R = resolvable::Simple;
+
     let id = SimpleUnique { id: "id1" };
 
-    let s: N = Node {
+    let s: Node<R> = Node {
         id: id.clone(),
         dependency: None
     };
@@ -51,9 +52,11 @@ fn duplicate() {
 
 #[test]
 fn circular() {
+    type R = resolvable::Simple;
+
     let id = SimpleUnique { id: "id1" };
 
-    let mut circular: N = Node {
+    let mut circular: Node<R> = Node {
         id: id.clone(),
         dependency: None
     };
@@ -73,28 +76,19 @@ fn circular() {
 #[test]
 fn recursive() {
     // c -> b -> a => c -> b -> a
-    let id_a = SimpleUnique { id: "a" };
-    let id_b = SimpleUnique { id: "b" };
-    let id_c = SimpleUnique { id: "c" };
+    type R = resolvable::Simple;
 
-    let a: N = Node {
-        id: id_a.clone(),
-        dependency: None
-    };
+    let nodes: Vec<Node<R>> =
+        vec!["a", "b", "c"]
+        .iter()
+        .map(|id| SimpleUnique { id })
+        .map(|id| Node { id, dependency: None })
+        .collect();
 
-    let a_dep = resolvable::Simple::new(&a);
+    let (a, mut b, mut c) = (nodes[0].clone(), nodes[1].clone(), nodes[2].clone());
 
-    let b: N = Node {
-        id: id_b.clone(),
-        dependency: Some(a_dep)
-    };
-
-    let b_dep = resolvable::Simple::new(&b);
-
-    let c: N = Node {
-        id: id_c.clone(),
-        dependency: Some(b_dep)
-    };
+    b.dependency = Some(R::new(&a));
+    c.dependency = Some(R::new(&b));
 
     let path = Path::new(vec![]);
     let res = c.solve(path);
@@ -108,29 +102,27 @@ fn recursive() {
 
 #[test]
 fn with_any() {
-    // a -> (b | c -> a) => a -> b  // TODO: magic syntax / macro
-    let id_a = SimpleUnique { id: "a" };
-    let id_b = SimpleUnique { id: "b" };
-    let id_c = SimpleUnique { id: "c" };
+    // a -> (b | c -> a) => a -> b
 
-    let mut a: NAny = Node {
-        id: id_a.clone(),
-        dependency: None
-    };
+    type R = resolvable::Any;
 
-    let b: NAny = Node {
-        id: id_b.clone(),
-        dependency: None
-    };
+    let nodes: Vec<Node<R>> =
+        vec!["a", "b", "c"]
+        .iter()
+        .map(|id| SimpleUnique { id })
+        .map(|id| Node { id, dependency: None })
+        .collect();
 
-    let c: NAny = Node {
-        id: id_c.clone(),
-        dependency: Some(
-            resolvable::Any::new(vec![&a]))
-    };
+    let (mut a, b, mut c) = (nodes[0].clone(), nodes[1].clone(), nodes[2].clone());
+
+    // NOTE: the dependency should be a RefCell, but this works well enough for a test
+    // `c.dependency` is not exactly the same as `a` here (it is cloned before setting
+    // `a.dependency`)
+    c.dependency = Some(
+        R::new(vec![&a]));
 
     a.dependency = Some(
-        resolvable::Any::new(vec![&b, &c]));
+        R::new(vec![&b, &c]));
 
     let path = Path::new(vec![]);
     let res = a.solve(path);
@@ -149,7 +141,7 @@ fn with_orand() {
     type And = resolvable::AndDependency;
     type Or = resolvable::OrDependency;
 
-    let nodes: Vec<Node<R>> = 
+    let nodes: Vec<Node<R>> =
         vec!["a", "b", "c", "d"]
         .iter()
         .map(|id| SimpleUnique { id })
