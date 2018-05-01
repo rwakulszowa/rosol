@@ -1,5 +1,3 @@
-extern crate petgraph;
-
 mod cache;
 pub mod node;
 pub mod package;
